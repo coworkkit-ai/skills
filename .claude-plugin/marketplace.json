@@ -1,0 +1,15 @@
+{
+  "name": "coworkkit",
+  "description": "Coworkkit onboarding skills — take a web app from nothing installed to a verified first voice session, and keep the rules for every later change.",
+  "owner": {
+    "name": "Coworkkit",
+    "url": "https://coworkkit.ai"
+  },
+  "plugins": [
+    {
+      "name": "coworkkit",
+      "source": "./",
+      "description": "Add a voice AI co-worker to your web app: coworkkit-setup installs and verifies the SDK, coworkkit-declare wires actions, surfaces and elements, and the bundled MCP gives your agent live docs plus session diagnostics."
+    }
+  ]
+}
