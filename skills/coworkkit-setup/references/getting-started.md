@@ -10,6 +10,13 @@ Coworkkit is a **closed loop**: your browser never sees a secret key. Your backe
 
 **By hand:** the five steps on this page. They're the same three files, and reading them once is worth it even if the agent types them for you. You'll know exactly what's in your repo.
 
+**By hand for your framework:** the numbered steps below are the Next.js App Router shape. For the exact by-hand steps for another stack — the same ones the portal Quickstart and your coding agent use, so there is never a second hand-maintained copy — open your framework's quickstart:
+
+- [App Router](/docs-md/quickstart-nextjs-app-router.md)
+- [Pages Router](/docs-md/quickstart-nextjs-pages-router.md)
+- [Vite + Express](/docs-md/quickstart-vite-express.md)
+- [Remix](/docs-md/quickstart-remix.md)
+
 ## 1 · Install
 
 The browser half and the backend half, as two packages. They sit on opposite sides of a security boundary, so they install separately ([why two?](/docs/how-it-works)):
@@ -28,7 +35,7 @@ Create or edit `.env.local` in your project root with a key from your Coworker's
 COWORKKIT_API_KEY=ck_...your_api_key...
 ```
 
-Restart your dev server after creating it; Next reads env vars at server start. Keep it server-only: never under a browser-readable prefix like `NEXT_PUBLIC_`.
+[Sign in](/sign-in) to get this pre-filled with your key — your Coworker’s Quickstart tab drops your real key straight into every snippet (it’s shown only once, so that’s the only moment we can). Restart your dev server after creating it; Next reads env vars at server start. Keep it server-only: never under a browser-readable prefix like `NEXT_PUBLIC_`.
 
 ## 3 · The server token route
 
@@ -63,6 +70,7 @@ Not on Next.js? `coworkkitSessionRoute` is the Next drop-in, but `mintSession` m
 "use client";
 
 import { CoworkkitProvider } from "@coworkkit/react";
+import { CoworkkitWatch } from "@coworkkit/react/watch";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -88,6 +96,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      {/* Dev-only observability panel — self-hides in production. */}
+      <CoworkkitWatch />
     </CoworkkitProvider>
   );
 }
@@ -121,6 +131,8 @@ Run your dev server. A small floating circle, the Coworkkit button, appears in t
 *It appears bottom-right on every page. Click it and start talking.*
 
 If the button's ring says **Setup needed** instead of connecting, the route or the key is the problem; the exact reason is in your browser console. [Troubleshooting](/docs/troubleshooting) lists every status the ring can show and what each one means.
+
+In a dev build a thin banner also appears across the top with these same five steps, live — it names the exact reason a connect failed and warns about the two mistakes that otherwise fail silently. [Development mode](/docs/dev-mode) covers it, and how to hide it before you ship.
 
 ## Where are the controls?
 

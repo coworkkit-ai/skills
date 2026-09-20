@@ -431,6 +431,12 @@ POST {base}/session          base: env COWORKKIT_CLOUD_URL, default https://api.
     (SPEC-0106): a per-session minute budget (Growth), how it ends at a wall (`"goodbye"` default |
     `"cut"`), and a region preference (Growth). Below the entitled plan they are ignored (never
     rejected); the response's `session` echoes what actually applied.
+  - `"session": {"dev": true}` — **force development mode** for this session (SPEC-0114, a boolean;
+    any other type is ignored). The escape hatch for a staging/preview deployment that ships as a
+    `production` bundle but should still get the dev co-worker behaviour; a normal
+    `NODE_ENV !== "production"` browser build already turns dev on without it. Forwarded opaquely
+    (no recipe change) and **dispatch-only — never echoed** on the response (unlike the settings
+    above). Leave it unset for real production.
 
   The recipes post `user.id` only; add the other `user` facts / a `session` object the same way
   when you need them — an existing backend that sends only `{"user": {"id"}}` stays fully
@@ -442,10 +448,13 @@ POST {base}/session          base: env COWORKKIT_CLOUD_URL, default https://api.
   `user.id` only drops every per-user placement signal, so Edge ranks all sessions from the account
   home. **Never send the retired top-level `userId` / `userIp`** — they are a `400 retired_field`.
 - **Success (2xx):** a JSON object — `{ token, serverUrl, cloudUrl, sessionId, session }`, optionally
-  with `lookCode` (the tenant's saved FAB look, SPEC-0098; absent when the tenant has none).
+  with `lookCode` (the tenant's saved FAB look, SPEC-0098; absent when the tenant has none) and
+  `onboarding` (the coworker's setup progress, SPEC-0115 — `{ done: ["key"|"installed"|"connected"|
+  "first_action"|"live", …] }`; absent when talking to a pre-0115 control service).
   `sessionId` (`ses_…`) is the opaque handle you store to reconcile later via `GET /sessions/{id}`
   or the `session.ended` webhook; `session` echoes what actually applied (SPEC-0106). Relay it to
-  the browser **unchanged** — the SDK reads whichever fields are present.
+  the browser **unchanged** — the SDK reads whichever fields are present. New additive fields like
+  these round-trip through every recipe untouched (the conformance kit pins it).
 - **Failure (non-2xx):** a JSON object `{ error, reason? }`. Surface the HTTP status
   **and** the `reason` — the browser SDK maps the token to what the user is told, so
   a relay that drops it turns "your key is wrong" into "can't connect".

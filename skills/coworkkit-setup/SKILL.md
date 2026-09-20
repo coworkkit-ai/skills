@@ -1,14 +1,15 @@
 ---
 name: coworkkit-setup
 description: >-
-  Add a voice AI co-worker to a web app with Coworkkit and prove it works before the developer
-  starts a session. Use when a repository has no Coworkkit yet and someone wants voice that both talks
-  and does something: it detects the stack (Next.js App Router, Vite + Express, Remix, or other),
-  installs @coworkkit/react and @coworkkit/server, wires the browser Provider and a server-side
-  token route, declares a first surface and one real action, runs a bundled verifier (versions,
-  Provider placement, key hygiene, and a live token mint through the app's own route), and writes
-  the load-bearing rules into AGENTS.md. Do not use it to change an existing integration — use the
-  coworkkit-declare skill for that.
+  Adds a voice AI co-worker to a web app with Coworkkit and proves it works before the developer
+  starts a session. Use when someone asks to add voice, a voice assistant or a voice agent to
+  their app, to set up, install or integrate Coworkkit (@coworkkit/react, @coworkkit/server), or
+  when a repository has no Coworkkit yet. Detects the stack (Next.js App Router, Vite + Express,
+  Remix, or another React app), wires the browser Provider and a server-side token route,
+  declares a first surface and offers one real action, runs a bundled verifier (versions,
+  Provider placement, key hygiene, and a live token mint through the app's own route), and
+  writes the durable rules into AGENTS.md. Not for changing an existing integration — use
+  coworkkit-declare for that.
 license: MIT
 compatibility: >-
   A JavaScript/TypeScript web front end (Next.js App Router, Vite + Express, Remix, or a similar
@@ -32,12 +33,15 @@ after voice is confirmed.
 ## Beat 0 — Rules you follow throughout
 
 <!-- coworkkit:rules:start -->
-- The `<CoworkkitProvider>` wrapper (with its `getToken` prop) and the token-mint route are exact — reproduce them as shown; adapt only *where* each goes to fit this repo.
-- Where the instructions above say to create a NEW file, write the whole file; do not splice fragments.
-- Where they say to WRAP or ADD TO an existing file, keep every line that file already has and only insert the new code — never overwrite the file or drop its contents. In Remix, leave the `<html>`, `<head>`, `<Meta>`, `<Links>`, and `<Scripts>` exactly as they are and wrap only the `<Outlet />`.
-- `<CoworkkitProvider>` takes no key of any kind — there is no `apiKey` prop. The secret lives only in the route above, server-side.
-- **Wrap high.** Put `<CoworkkitProvider>` as high as the signed-in tree goes — **around** your app's own context/state/shell providers, not nested inside them. Everything that will ever declare an action must be a descendant of `<CoworkkitProvider>`, and a persistent nav is the usual place actions live — so if your state provider is what renders your nav, the Provider must sit ABOVE that state provider, not just around its inner `{children}`. An action declared in a component that ends up outside `<CoworkkitProvider>` silently registers nothing, and the co-worker talks but can't act.
-- When both seams are wired, tell the developer to start their dev server and smoke-test: a small button appears in the bottom-right corner — click it, allow the microphone, and say hello; the agent should reply by voice. Do not wire any actions in this beat — the first-action section below is separate and opt-in.
+- **Provider high.** `<CoworkkitProvider>` wraps the whole signed-in tree, above the app's own context/state/shell providers. A Coworkkit hook rendered outside it registers nothing — the co-worker talks but can't act, and nothing errors.
+- **No key in the browser.** The Provider takes `getToken` and no key of any kind — there is no `apiKey` prop. The secret is `COWORKKIT_API_KEY`, read only by the server-side token route — never under a browser-readable prefix (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`) and never returned to the browser (for example from a Remix loader).
+- **Real user id.** The token route derives the acting user's id from the app's own auth, server-side, never from the client. `"dev-user"` is for local development only.
+- **Declare where it stays mounted.** A function from an app-wide source (a context or store available on every page) gets its `useAction` in a persistent client component — the nav or shell — so it works from anywhere. Keep an action on its page only when its function is genuinely page-local.
+- **Cross-page.** For a page-local target, navigation is a `useElement` on the persistent nav and the target action stays on its own page. Never gate navigation through one page's `handActions` — it applies only while that page is active.
+- **Two separate gates.** Hand mode is the touch gate: anything that operates the UI (navigate, click, toggle) is a `useElement` action, gated automatically. `control: "hard"` is the risk gate for costly or destructive actions — an on-screen Confirm the co-worker cannot click itself. A plain data write via `useAction` needs neither.
+- **Shape.** `useAction({ name, description, run })` takes one object argument, not an `(event, handler)` pair.
+- **Edit, don't overwrite.** Adding Coworkkit code to an existing file keeps every line that file already has. The Provider wrapper and the token route are exact — take them from the quickstart for this stack, adapting only where they go.
+- **Closed loop.** Never choose or configure a voice provider, a model, or a transport, and never add a provider key or connection URL — the runtime supplies all of it.
 <!-- coworkkit:rules:end -->
 
 ## Beat 1 — Detect the stack and get the quickstart
@@ -52,14 +56,15 @@ after voice is confirmed.
      (`quickstart-nextjs-app-router.md`, `quickstart-vite-express.md`, `quickstart-remix.md`).
    - Bundled fallback: `references/quickstart-<framework>.md` in this skill.
    - If the Coworkkit MCP is connected (Claude Code plugin path), call `get_started` for the same content instead of fetching.
-3. Read the app's entry files before you change anything: the front-end entry (layout/root/`App`), the router or nav, and where server code lives.
+3. **Use the quickstart for the exact code and where each file goes — nothing else.** It is written as a standalone prompt with its own two-step flow. Where its procedure differs from this skill (it says to skip surfaces, and to smoke-test before anything is verified), this skill's beats win: declare the landing surface (Beat 4), make the first-action offer (Beat 5), and verify (Beat 6) before anyone starts a session.
+4. Read the app's entry files before you change anything: the front-end entry (layout/root/`App`), the router or nav, and where server code lives.
 
 ## Beat 2 — Account and key
 
 The token route needs one secret: `COWORKKIT_API_KEY`.
 
 1. If the developer does not have a key yet, point them to [app.coworkkit.ai](https://app.coworkkit.ai): sign up (free), create a coworker, and copy its key from the coworker's **API keys** tab.
-2. Put the key in a **git-ignored** env file (`.env.local` for Next.js, the Express server's `.env` for Vite, `.env` for Remix). Either have the developer paste it, or write the file yourself — but **never print the key's value, never echo it into chat, and never commit it**. Confirm the env file is covered by `.gitignore` (most `.env*` files already are; add a line if not).
+2. The key goes in a **git-ignored** env file (`.env.local` for Next.js, the Express server's `.env` for Vite, `.env` for Remix). **Do not ask for the key in chat.** Ask the developer to add the line `COWORKKIT_API_KEY=<their key>` to that file themselves and tell you when it is done; if the line is already there, leave it alone. To check, test for the line's presence without printing its value — for example `grep -c '^COWORKKIT_API_KEY=' .env.local`. If the developer pastes the key into chat anyway, write it to the env file and never repeat it back. Never print, log or commit the key's value, and confirm the env file is covered by `.gitignore` (most `.env*` files already are; add a line if not).
 
 ## Beat 3 — Wire the two seams
 
@@ -123,6 +128,8 @@ Run the bundled verifier from the app's repo root:
 node <this skill's dir>/scripts/verify.mjs --url http://localhost:<dev-port>
 ```
 
+`<this skill's dir>` is the folder that contains this SKILL.md — in the app's repo that is typically `.claude/skills/coworkkit-setup` or `.agents/skills/coworkkit-setup`.
+
 It reports each check as PASS / WARN / FAIL / SKIP and never prints your key. It checks: both
 packages installed at the same version and at least the SDK version this skill targets; a
 `<CoworkkitProvider>` with a `getToken` prop and **no** key prop; a token route importing
@@ -146,6 +153,8 @@ Give the developer the exact moment, tied to the action you wired. For example, 
 > say **"add a task to call mom"**. You'll hear the co-worker reply, and a new "call mom" task
 > appears in the list.
 
+If no action is wired yet — the developer declined, or the app has no real functions yet — the first magic is the greeting itself: *start the app, click the small round button in the bottom-right corner, allow the microphone, and say **"hello — where am I?"*** The co-worker replies by voice and names the surface you declared.
+
 Name the exact phrase to say and the exact visible result. If the Coworkkit MCP is connected and
 the first session doesn't behave, call `diagnose_session` on the session id; otherwise open the
 coworker's **Sessions** page in the portal to see why.
@@ -157,6 +166,8 @@ Write the load-bearing rules into the repo so they hold after this skill leaves 
 ```
 node <this skill's dir>/scripts/verify.mjs --write-rules
 ```
+
+`<this skill's dir>` is the folder that contains this SKILL.md — in the app's repo that is typically `.claude/skills/coworkkit-setup` or `.agents/skills/coworkkit-setup`.
 
 This inserts (or updates, idempotently) a `<!-- coworkkit:rules:start -->` … `<!-- coworkkit:rules:end -->`
 block into `AGENTS.md` (created if absent), and adds an `@AGENTS.md` import line to `CLAUDE.md` if

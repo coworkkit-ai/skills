@@ -1,13 +1,14 @@
 ---
 name: coworkkit-declare
 description: >-
-  Wire more of a web app for its Coworkkit voice co-worker, and make every later change the right
-  way. Use once voice is working (coworkkit-setup done) and someone wants the co-worker to do more:
-  add or change an action, a surface, an element, or a cue. It picks the right primitive (useAction,
-  useSurface, useElement, cue), mounts it where it stays reachable (the state-first cross-page
-  recipe), sets the control gate (open / soft / hard) by how costly the call is, keeps Hand mode as
-  the separate "may it touch the page" axis, proposes before it wires, and re-runs the bundled
-  verifier. Use coworkkit-setup instead for the first install and the token route.
+  Wires more of a web app for its Coworkkit voice co-worker and makes every later change the
+  right way. Use once voice is working (coworkkit-setup done) and someone wants the co-worker to
+  do more — add or change an action, a surface, an element or a cue, make it navigate, confirm a
+  risky action, or fix a co-worker that talks but does not act. Picks the right primitive
+  (useAction, useSurface, useElement, cue), mounts it where it stays reachable (state-first),
+  sets the control gate (open / soft / hard) by cost, keeps Hand mode as the separate touch
+  axis, proposes before wiring, and re-runs the bundled verifier. Use coworkkit-setup instead
+  for the first install and the token route.
 license: MIT
 compatibility: >-
   A repository already integrated with Coworkkit (a <CoworkkitProvider> mounted with getToken and a
@@ -105,7 +106,7 @@ A name containing `delete`/`remove`/`wipe`/`purge`/`erase`/`destroy` with no `co
 
 `control` and **Hand mode** are different axes and they compose. Hand mode answers *may the
 co-worker operate the UI at all* — a switch **only the user** arms (from the hand button in the
-button's control row); the co-worker can never arm it itself. `control` answers *how firmly is this
+Coworkkit button's control row); the co-worker can never arm it itself. `control` answers *how firmly is this
 one call confirmed* once it is allowed to run.
 
 - Every `useElement` action is Hand-gated automatically — operating a mounted element is a UI touch.

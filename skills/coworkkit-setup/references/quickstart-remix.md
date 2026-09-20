@@ -112,6 +112,33 @@ Derive the acting user id from this app's authenticated session, server-side; th
 - **Two independent gates.** Hand mode (the *touch* gate) is only for actions that operate the UI the way a hand would — navigate, or click/toggle an on-screen control; declare those with `useElement` (auto-gated). A plain data write via `useAction` is not that — leave it ungated. `control: "hard"` (the *risk* gate) is for costly or destructive actions — the SDK shows an on-screen Confirm the agent cannot click itself. Separate axes.
 - **Cross-page — only for a genuinely page-local target.** Wire navigation as a `useElement` on the persistent nav (auto-gated), and keep the target action on its own page; at runtime the agent arms Hand mode → navigates → the page mounts → its action runs. Do not gate navigation via one page's `handActions` — the gate only checks the active page. (Most name/profile/settings changes are app-wide, not this case.)
 
+**Sample action first — wire `celebrate` before anything app-specific (SPEC-0115).** Once voice smoke-tests, the co-worker can talk but can't act until an action is declared. Paste this exact component anywhere inside `<CoworkkitProvider>` — it needs no app knowledge and no dependency, so the developer can prove the co-worker ACTS in ~30 seconds:
+
+```tsx
+// CelebrateAction.tsx — paste anywhere inside <CoworkkitProvider>, then say "celebrate".
+import { useAction } from "@coworkkit/react";
+
+export function CelebrateAction() {
+  useAction({
+    name: "celebrate",
+    description: "Celebrate: show a short on-screen burst to prove the co-worker can act.",
+    run: () => {
+      const el = document.createElement("div");
+      el.textContent = "🎉 It works — your co-worker just acted.";
+      el.setAttribute(
+        "style",
+        "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:12px 18px;border-radius:999px;background:#111;color:#fff;font:600 15px system-ui;z-index:2147483639",
+      );
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2200);
+    },
+  });
+  return null;
+}
+```
+
+Then tell the developer to restart the dev server, click the button and say "celebrate" — a small burst confirms it acts, not just talks. That IS the first-action smoke test; the phrase to say is `celebrate`. They delete this component once a real action exists (the next beat).
+
 **First-action beat — offer up front (don't auto-wire, don't defer).** The moment the seams are wired — you have already read this app's code — do not just stop. Tell the developer plainly, in this order: (1) voice is ready to smoke-test; (2) it can talk but can't act yet, because no actions are wired; (3) name the 2–3 things a user would most likely ask for by voice in THIS app, as the **real** functions you found (e.g. `addTask` in `state.tsx`), not generic examples — and ask which one to wire. Wire only the one they pick, following the rules above; if they named one already, wire that. Do NOT defer the survey to later or wait to be asked — you have the code open now, so make the concrete offer immediately. When it's wired, tell them to say it aloud to confirm the co-worker now acts — not just talks.
 
 **What's next — mention, don't wire.** Once that first action works, tell the developer (don't build it now — point them to the **Actions & Surfaces** docs) that two capabilities this prompt deliberately skipped can take the co-worker further: **surfaces** (`useSurface`, telling the agent which page the user is on) and **chime-in** (letting it greet or speak first instead of only answering).

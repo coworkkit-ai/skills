@@ -16,7 +16,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -515,12 +515,17 @@ function rulesBullets() {
 
 function buildRulesBlock() {
   const bullets = rulesBullets();
-  const verifyRel = relative(CWD, join(SCRIPT_DIR, "verify.mjs")) || "verify.mjs";
-  const lines = [RULES_START, "## Coworkkit", ...bullets];
-  lines.push(
-    `- Run \`node ${verifyRel}\` after any change to actions, surfaces, the Provider or the token route.`,
-  );
-  lines.push(RULES_END);
+  // How to re-run the verifier, named in the persistent block. Separators normalised to `/`. When the
+  // skill is installed INSIDE the repo (.claude/skills/… or .agents/skills/…), point at it by path.
+  // When it sits OUTSIDE the repo — a global `npx skills add -g` install, where `rel` is empty, climbs
+  // out with `..`, or is absolute — a machine-specific path must never be baked into the customer's
+  // AGENTS.md, so name the skill's own script instead.
+  const rel = relative(CWD, join(SCRIPT_DIR, "verify.mjs")).split(sep).join("/");
+  const inRepo = rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+  const runLine = inRepo
+    ? `- Run \`node ${rel}\` after any change to actions, surfaces, the Provider or the token route.`
+    : "- Run the coworkkit-setup skill's `scripts/verify.mjs` after any change to actions, surfaces, the Provider or the token route.";
+  const lines = [RULES_START, "## Coworkkit", ...bullets, runLine, RULES_END];
   return lines.join("\n");
 }
 

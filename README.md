@@ -35,6 +35,16 @@ No account is needed to install. When it is time to wire the token route you cre
 coworker at [app.coworkkit.ai](https://app.coworkkit.ai) and copy its key — a **server-side**
 secret that never reaches the browser and never gets pasted into a chat.
 
+## Use it
+
+Open your app in your coding agent and say:
+
+> Add Coworkkit to this app so I can talk to it by voice — use the coworkkit-setup skill.
+
+Later, to teach the co-worker more:
+
+> Use the coworkkit-declare skill to let the co-worker <do the thing>.
+
 ## What "verified" means
 
 `coworkkit-setup` runs `coworkkit-setup/scripts/verify.mjs` (Node 18+, zero dependencies) in your
@@ -48,6 +58,6 @@ mint through **your own** token route succeeds. It never prints your key.
 This repository is **generated** — do not edit it here. The skills' source lives in the
 Coworkkit monorepo (`skills/`) and their reference content is derived from the public docs at
 [app.coworkkit.ai/docs](https://app.coworkkit.ai/docs); every change is mirrored here by the
-release process. File an issue against Coworkkit rather than sending a PR to this mirror.
+release process. Open an issue in this repository rather than sending a pull request — fixes land in the source and are mirrored here.
 
 MIT licensed.
