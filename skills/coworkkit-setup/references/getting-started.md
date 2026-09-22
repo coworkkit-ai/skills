@@ -70,7 +70,6 @@ Not on Next.js? `coworkkitSessionRoute` is the Next drop-in, but `mintSession` m
 "use client";
 
 import { CoworkkitProvider } from "@coworkkit/react";
-import { CoworkkitWatch } from "@coworkkit/react/watch";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -96,8 +95,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-      {/* Dev-only observability panel — self-hides in production. */}
-      <CoworkkitWatch />
+      {/* In a dev build, the Coworkkit dev banner provides Watch — no mount needed. */}
     </CoworkkitProvider>
   );
 }
@@ -140,7 +138,7 @@ Once a session is live, the mute, hand-mode, end and settings buttons are tucked
 
 ## See what the agent sees
 
-Before you wire actions, drop in `<CoworkkitWatch />` (from `@coworkkit/react/watch`), a dev-only panel that shows what the agent perceives and every action it calls. It's your instrument panel for everything next, so mount it now and keep it open as you wire your first action. [The Watch panel](/docs/watch) shows how.
+Before you wire actions, open **Watch**, a dev-only panel that shows what the agent perceives and every action it calls. In a dev build the Coworkkit dev banner provides it — open it from the banner, or press `ctrl+shift+k`; there is nothing to mount. It's your instrument panel for everything next, so keep it open as you wire your first action. [The Watch panel](/docs/watch) shows how.
 
 ## Next steps
 

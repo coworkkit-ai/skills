@@ -12,7 +12,6 @@ You are integrating **Coworkkit** — a voice + agent runtime — into this exis
 
 ```tsx
 import { CoworkkitProvider } from "@coworkkit/react";
-import { CoworkkitWatch } from "@coworkkit/react/watch";
 import { Outlet } from "@remix-run/react";
 
 export default function App() {
@@ -39,7 +38,7 @@ export default function App() {
       }}
     >
       <Outlet />
-      <CoworkkitWatch />
+      {/* In a dev build, the Coworkkit dev banner provides Watch — no mount needed. */}
     </CoworkkitProvider>
   );
 }

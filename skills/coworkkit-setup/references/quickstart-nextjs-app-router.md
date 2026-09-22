@@ -14,7 +14,6 @@ You are integrating **Coworkkit** — a voice + agent runtime — into this exis
 "use client";
 
 import { CoworkkitProvider } from "@coworkkit/react";
-import { CoworkkitWatch } from "@coworkkit/react/watch";
 import type { ReactNode } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -41,8 +40,7 @@ export function Providers({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      {/* Dev-only observability panel — self-hides in production. */}
-      <CoworkkitWatch />
+      {/* In a dev build, the Coworkkit dev banner provides Watch — no mount needed. */}
     </CoworkkitProvider>
   );
 }
