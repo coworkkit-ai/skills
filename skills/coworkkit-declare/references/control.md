@@ -52,7 +52,7 @@ Each settled call emits one record: *what* ran, the level it was gated at, the g
 
 ```tsx
 <CoworkkitProvider
-  getToken={getToken}
+  tokenUrl="/api/coworkkit/session"
   onActionRecord={(record) => {
     // e.g. "deleteProject" · "hard" · "confirmed"
     audit.log(record.action, record.control, record.gate);
@@ -60,4 +60,4 @@ Each settled call emits one record: *what* ran, the level it was gated at, the g
 >
 ```
 
-The SDK **emits and never stores** these records. The audit trail is yours to keep wherever you keep the rest.
+The SDK **emits and never stores** these records. The audit trail is yours to keep wherever you keep the rest. `onActionRecord` is a function, and a function can't be passed from a Server Component, so a Provider that sets it lives in a client component (your own `Providers`, say) rather than straight in the layout.

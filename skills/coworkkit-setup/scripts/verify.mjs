@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// verify.mjs — Coworkkit integration verifier (SPEC-0113 crit 18-23).
+// verify.mjs — Coworkkit integration verifier (SPEC-0113 crit 18-23; V2 per SPEC-0116 crit 32).
 //
 // Runs in a customer repository with Node 18+ and NOTHING beyond Node built-ins.
 // It reports each check as PASS / WARN / FAIL / SKIP and exits:
@@ -44,6 +44,9 @@ const BROWSER_PREFIXES = ["NEXT_PUBLIC_", "VITE_", "PUBLIC_"];
 // block on undici's ~300s default; abort after a few seconds and treat it as SKIP (same path as a
 // refused connection). Overridable for tests via COWORKKIT_VERIFY_TIMEOUT_MS.
 const LIVE_MINT_TIMEOUT_MS = Number(process.env.COWORKKIT_VERIFY_TIMEOUT_MS) || 5000;
+// The default token-route path (SPEC-0116 §D11): namespaced, so it can never collide with an app's
+// own /api/session login endpoint. Any path works — the Provider's tokenUrl names the real one.
+const DEFAULT_ROUTE_PATH = "/api/coworkkit/session";
 
 // ── args ──────────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
@@ -219,6 +222,33 @@ function checkVersions() {
   };
 }
 
+// The tag's own attribute list: every `{…}` expression container (an arrow-function body, a JSX
+// comment, a spread) collapses to `{}`, so a prop only matches where JSX puts attribute names —
+// a getToken body that happens to mention `tokenUrl = …` is not a second prop.
+function tagAttributes(tag) {
+  let out = "";
+  let depth = 0;
+  for (const c of tag) {
+    if (c === "{") {
+      if (depth === 0) out += c;
+      depth += 1;
+    } else if (c === "}") {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) out += c;
+    } else if (depth === 0) {
+      out += c;
+    }
+  }
+  return out;
+}
+
+function hasProp(tag, name) {
+  return new RegExp(`\\s${name}\\s*=`).test(tagAttributes(tag));
+}
+
+// V2 — the Provider's session source (SPEC-0116 crit 32). It takes exactly one of `tokenUrl` (the
+// path of the app's own token route; the SDK posts to it) or `getToken` (a custom fetch — extra
+// headers, a cross-origin route). Either one passes, neither fails, both on one tag warns.
 function checkProvider(source) {
   const tags = providerTags(source);
   if (tags.length === 0) {
@@ -228,15 +258,38 @@ function checkProvider(source) {
       message: "no <CoworkkitProvider> found — mount it high in the signed-in tree",
     };
   }
-  const withToken = tags.some((t) => /getToken\s*=/.test(t));
-  if (!withToken) {
+  const props = tags.map((t) => ({
+    tokenUrl: hasProp(t, "tokenUrl"),
+    getToken: hasProp(t, "getToken"),
+  }));
+  if (props.some((p) => p.tokenUrl && p.getToken)) {
     return {
       code: "V2",
-      status: "FAIL",
-      message: "<CoworkkitProvider> has no getToken prop — it needs one to mint sessions",
+      status: "WARN",
+      message:
+        "<CoworkkitProvider> has both tokenUrl and getToken — the Provider takes one or the other: keep tokenUrl (the path of your token route) and remove getToken, or keep only getToken if you need custom headers or a cross-origin route",
     };
   }
-  return { code: "V2", status: "PASS", message: "<CoworkkitProvider getToken={…}> found" };
+  const withTokenUrl = props.some((p) => p.tokenUrl);
+  const withGetToken = props.some((p) => p.getToken);
+  if (withTokenUrl && withGetToken) {
+    return {
+      code: "V2",
+      status: "PASS",
+      message: "<CoworkkitProvider> found — tokenUrl on one mount, getToken on another",
+    };
+  }
+  if (withTokenUrl) {
+    return { code: "V2", status: "PASS", message: '<CoworkkitProvider tokenUrl="…"> found' };
+  }
+  if (withGetToken) {
+    return { code: "V2", status: "PASS", message: "<CoworkkitProvider getToken={…}> found" };
+  }
+  return {
+    code: "V2",
+    status: "FAIL",
+    message: `<CoworkkitProvider> has no tokenUrl or getToken prop — it needs one to mint sessions: tokenUrl="${DEFAULT_ROUTE_PATH}" (the path of your token route), or getToken for a custom fetch`,
+  };
 }
 
 function checkKeyProp(source) {
@@ -421,14 +474,26 @@ function checkDeclarations(source) {
 }
 
 function detectRoutePath(source) {
+  // 1. The Provider's own tokenUrl="/…" — the exact path the browser posts to, so it wins over any
+  //    other session-looking literal in the app (e.g. the app's own login /api/session).
+  for (const tag of providerTags(source)) {
+    const m = /\stokenUrl\s*=\s*["'](\/[^"']*)["']/.exec(tagAttributes(tag));
+    if (m) return m[1];
+  }
+  // 2. Any quoted path containing "session" (a getToken fetch, a route constant).
   const re = /["'](\/[A-Za-z0-9/_-]*session[A-Za-z0-9/_-]*)["']/;
   for (const { text } of source) {
     const m = re.exec(text);
     if (m) return m[1];
   }
-  // Next.js file-route convention: app/api/session/route.ts → /api/session
-  if (existsSync(join(CWD, "app", "api", "session"))) return "/api/session";
-  return "/api/session";
+  // 3. No literal to read: go by the Next.js route file. A route at the pre-SPEC-0116 default
+  //    (app/api/session) keeps its path unless the namespaced one sits beside it.
+  const nextRoute = (...p) =>
+    existsSync(join(CWD, "app", ...p)) || existsSync(join(CWD, "src", "app", ...p));
+  if (nextRoute("api", "session") && !nextRoute("api", "coworkkit", "session")) {
+    return "/api/session";
+  }
+  return DEFAULT_ROUTE_PATH;
 }
 
 function reasonHint(reason) {

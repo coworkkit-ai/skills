@@ -1,6 +1,6 @@
 {
   "name": "coworkkit",
-  "version": "0.1.0-rc.4",
+  "version": "0.1.0-rc.6",
   "description": "Add a voice AI co-worker to your web app: install and verify the SDK, declare what it can do, and connect the Coworkkit MCP for live docs and session diagnostics.",
   "author": {
     "name": "Coworkkit",

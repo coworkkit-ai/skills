@@ -40,8 +40,11 @@ export function GlobalActions() {
   return null;
 }
 
-// app/(app)/layout.tsx is a Server Component; just render it next to the children:
-//   <Providers><GlobalActions />{children}</Providers>
+// app/(app)/layout.tsx is a Server Component; just render it next to the children, inside the
+// Provider and your own state provider (Coworkkit's on the outside):
+//   <CoworkkitProvider tokenUrl="/api/coworkkit/session">
+//     <AppStateProvider><GlobalActions />{children}</AppStateProvider>
+//   </CoworkkitProvider>
 ```
 
 Page-level things (the surface, the counts on screen, the controls that only exist there) stay on the page. The [Watch panel](/docs/watch)'s Catalogue tab shows exactly what is mounted at any moment. If an action you expect isn't listed, it's on a component that isn't there.

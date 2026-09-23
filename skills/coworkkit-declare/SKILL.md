@@ -11,11 +11,12 @@ description: >-
   for the first install and the token route.
 license: MIT
 compatibility: >-
-  A repository already integrated with Coworkkit (a <CoworkkitProvider> mounted with getToken and a
-  server-side token route — coworkkit-setup's job). React front end; Node 18+ for the bundled
-  verifier. Browser + WebRTC only.
+  A repository already integrated with Coworkkit (a <CoworkkitProvider> mounted with
+  tokenUrl="/api/coworkkit/session" or getToken, and a server-side token route —
+  coworkkit-setup's job). React front end; Node 18+ for the bundled verifier. Browser + WebRTC
+  only.
 metadata:
-  sdk: "0.1.0-rc.4"
+  sdk: "0.1.0-rc.6"
 ---
 
 # Declare what the co-worker can do, and change it safely

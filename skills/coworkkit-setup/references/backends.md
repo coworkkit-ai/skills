@@ -32,7 +32,7 @@ import { mintSession } from "@coworkkit/server";
 // COWORKKIT_API_KEY stays on the server — the browser only receives the short-lived token.
 // `user.id` is the user the agent acts as. "dev-user" is fine while developing; in production
 // derive it from your own auth/session middleware, server-side — never from the client.
-app.post("/api/session", async (_req, res) => {
+app.post("/api/coworkkit/session", async (_req, res) => {
   try {
     const session = await mintSession(process.env.COWORKKIT_API_KEY!, { user: { id: "dev-user" } });
     res.json(session);
@@ -48,7 +48,7 @@ Edge caveat: on the default path `mintSession` reads the control URL from `proce
 
 ## Any backend: the wire contract
 
-Under the hood, `mintSession` makes exactly one HTTPS request. That endpoint is public and language-blind, so on **PHP, Python, Ruby, Go**, or anything that speaks HTTP, you make the same request yourself. Hold your key, post the user's id, relay the JSON back to the browser's `getToken`. No Node, no SDK, no extra service on your side.
+Under the hood, `mintSession` makes exactly one HTTPS request. That endpoint is public and language-blind, so on **PHP, Python, Ruby, Go**, or anything that speaks HTTP, you make the same request yourself. Hold your key, post the user's id, relay the JSON back to the browser. No Node, no SDK, no extra service on your side.
 
 **`POST /session`**
 
@@ -62,7 +62,7 @@ POST {base}/session         base: env COWORKKIT_CLOUD_URL, default https://api.c
             "session": {"budgetMinutes": 7, "closing": "cut"}}              wishes optional
 
 -> 2xx      {"token": "...", "serverUrl": "...", "cloudUrl": "...",
-             "sessionId": "ses_...", "session": {...}, "lookCode": "..."}   relay UNCHANGED to getToken
+             "sessionId": "ses_...", "session": {...}, "lookCode": "..."}   relay UNCHANGED to the browser
 -> 4xx/5xx  {"error": "...", "reason": "..."}                         reason optional; relay the status
 ```
 
@@ -372,6 +372,29 @@ func MintSession(apiKey, userID string) (map[string]any, error) {
 
 These recipes aren't just examples. Each one is tested against the same fake `/session` as our own Node package: success, unknown extra fields, an `out_of_credit` rejection, and non-JSON error pages. That's the bar for a community port too. A port in your language is official when it passes the same conformance suite `mintSession` does.
 
+## Your route, as seen from the browser
+
+That is the server half. The other half is the call the browser makes to *your* route. When the Provider carries `tokenUrl`, the SDK owns that request and makes it the same way on every stack; you own the route:
+
+**`POST <tokenUrl>`**
+
+```
+POST <tokenUrl>             your own route (e.g. /api/coworkkit/session), never a Coworkkit URL
+
+  header   content-type: application/json
+  body     {"language"?: "<BCP-47>", "timeZone"?: "<IANA>"}     hints only, both optional
+
+-> 2xx      return mintSession's result UNCHANGED                the SDK's session
+-> non-2xx  return its {"error", "reason"} WITH its status       the button says why
+```
+
+- **Method and content type:** `POST` with `content-type: application/json`. `tokenUrl` is a same-origin path, so the browser's own cookies go with it. For custom headers or a cross-origin API, pass a [custom getToken](/docs/advanced#custom-gettoken) instead.
+- **The body is hints only.** `language` and `timeZone` let the mint localize the voice and place the session near the user. Your route derives `user.id` from your own auth, server-side, never from this body.
+- **2xx:** return the session unchanged; the SDK uses every field as-is. A 2xx that isn't a session at all (an HTML page from a wrong path) reads as *Setup needed*.
+- **Non-2xx:** return the `{ error, reason }` with its status. The SDK turns them into the button's status, such as *Setup needed* or *Out of credit*, instead of a generic *Can't connect*.
+- **Additive only:** the SDK only ever adds optional body fields and ignores unknown response fields, so a route written today stays valid.
+- **A route may ignore the body.** The PHP, Python, Ruby and Go recipes above do (the coworker's default language applies); `coworkkitSessionRoute` forwards it for you.
+
 Want the route written for you? Your Coworker's [Quickstart](/tenants) tab generates a ready-to-paste setup prompt, with the exact token route for Next.js, Vite + Express, and Remix, that you hand to your AI coding agent.
 
 ---
@@ -422,7 +445,8 @@ POST {base}/session          base: env COWORKKIT_CLOUD_URL, default https://api.
     back to the coworker default).
   - `"user": {"timeZone": <IANA zone>}` and `"user": {"ip": <client IP>}` — **placement hints**
     (SPEC-0057). The browser SDK stamps `timeZone` for you and posts it (with `language`) to your
-    token route as the `getToken` context; forward it exactly as you forward `languageCode`.
+    token route as JSON hints (see *Your route, as seen from the browser*, below); forward it
+    exactly as you forward `languageCode`.
     `user.ip` is the opt-in, country-precision signal — pass your request's client IP (`req.ip` /
     `x-forwarded-for`). Both are used in-request only, **never stored, never logged** (only the
     derived region is recorded); the cloud uses them to place the session near the user when the
@@ -441,12 +465,14 @@ POST {base}/session          base: env COWORKKIT_CLOUD_URL, default https://api.
   The recipes post `user.id` only; add the other `user` facts / a `session` object the same way
   when you need them — an existing backend that sends only `{"user": {"id"}}` stays fully
   conformant (additive). The `@coworkkit/server` Next.js drop-in (`coworkkitSessionRoute`) does this
-  for you: it reads the browser SDK's posted `getToken` context and forwards `user.timeZone` /
+  for you: it reads the browser SDK's posted hints and forwards `user.timeZone` /
   `user.languageCode` plus the `x-forwarded-for` / `x-real-ip` client IP as `user.ip` (opt out with
-  `forwardClientIp: false`), and accepts a `session` option. A custom route must **post the
-  `getToken` context** from the browser and read it back the same way — a route that mints with
-  `user.id` only drops every per-user placement signal, so Edge ranks all sessions from the account
-  home. **Never send the retired top-level `userId` / `userIp`** — they are a `400 retired_field`.
+  `forwardClientIp: false`), and accepts a `session` option. A custom route that wants per-user
+  placement must **read the posted hints** back the same way (the SDK posts them itself when the
+  Provider carries `tokenUrl`; a custom `getToken` posts its context as the body) — a route that
+  mints with `user.id` only drops every per-user placement signal, so Edge ranks all sessions from
+  the account home. **Never send the retired top-level `userId` / `userIp`** — they are a
+  `400 retired_field`.
 - **Success (2xx):** a JSON object — `{ token, serverUrl, cloudUrl, sessionId, session }`, optionally
   with `lookCode` (the tenant's saved FAB look, SPEC-0098; absent when the tenant has none) and
   `onboarding` (the coworker's setup progress, SPEC-0115 — `{ done: ["key"|"installed"|"connected"|
@@ -462,6 +488,41 @@ POST {base}/session          base: env COWORKKIT_CLOUD_URL, default https://api.
   a mistyped base URL gives `404 {"error":"not found"}` and an unhandled fault gives
   `500 {"error":"internal error"}`. So read it defensively — `reason` may be absent, and
   an error body may not be JSON at all (a proxy or load balancer can return HTML).
+
+### Your route, as seen from the browser
+
+The contract above is the server → Coworkkit leg. The other leg is the browser → **your** route:
+when the Provider carries `tokenUrl` (SPEC-0116), the browser SDK owns that request and calls your
+token route like this. You own the route; the SDK owns the call.
+
+```
+POST <tokenUrl>                  your own route (e.g. /api/coworkkit/session) — never a Coworkkit URL
+  header  content-type: application/json
+  body    { "language"?: "<BCP-47>", "timeZone"?: "<IANA>" }     ← hints only, both optional
+
+→ 2xx      return mintSession's result (the /session body above) UNCHANGED  → the SDK's session
+→ non-2xx  return its { error, reason } WITH its status                    → the button says why
+```
+
+- **Method and content type.** `POST`, `content-type: application/json`. `tokenUrl` is a
+  same-origin path, so the browser's own cookies ride along (the SDK sets no `credentials`
+  override). For custom headers or a cross-origin API, use a custom `getToken` instead.
+- **The body is hints only.** `language` and `timeZone` let the mint localize the voice and place
+  the session near the user. Identity never comes from the client: your route derives `user.id`
+  from your own auth, server-side (KB-0001), **never from this body**.
+- **2xx — relay the session.** Return `mintSession`'s result (the `/session` success body)
+  **unchanged**; the SDK uses it as the session — every field relayed, nothing re-mapped or
+  dropped. A 2xx that is not a JSON object carrying a string `token` (an HTML page from a SPA
+  fallback, a wrong path) reads as a setup fault: the button shows *Setup needed*.
+- **Non-2xx — relay the failure.** Return its `{ error, reason }` with its status. The SDK carries
+  the `reason` and the HTTP status into the button's status (*Setup needed*, *Out of credit*, …)
+  instead of a generic *Can't connect*; a non-JSON error body still keeps its status.
+- **Additive only.** The SDK only ever **adds** optional body fields and **ignores** unknown
+  response fields — a route written today stays valid.
+- **A route may ignore the body.** The PHP / Python / Ruby / Go recipes do (they mint with
+  `user.id` alone, so the coworker's default language applies and placement ranks from the
+  account home); `@coworkkit/server`'s `coworkkitSessionRoute` forwards it (`timeZone` →
+  `user.timeZone`, `language` → `user.languageCode`).
 
 ### RejectReason values
 

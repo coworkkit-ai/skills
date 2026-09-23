@@ -8,7 +8,7 @@ The usual first-run snags, and why each one happens. If something here doesn't m
 
 ### The button never appears.
 
-The `CoworkkitProvider` isn't mounting. Three common causes: it's not wrapping your app, it isn't in a `"use client"` component (`getToken` is a function prop, so the Provider has to be a client component), or you've set `intensity="off"`. The Provider needs to wrap your tree in a client component with a working `getToken`.
+The `CoworkkitProvider` isn't mounting. Two common causes: it's not wrapping your app, or you've set `intensity="off"`. The Provider needs to wrap your tree; in Next.js that's one line in `app/layout.tsx`, with `tokenUrl` set to the path of your token route.
 
 ### The button appears on my login page too.
 
@@ -32,13 +32,13 @@ When a session can't start, the button doesn't just sit there: its ring shows a 
 
 | Ring says | What happened | What to do |
 | --- | --- | --- |
-| **Setup needed** | Your token route answered with a setup fault: a missing or unknown key, no user.id, or a bare 401/403/404 from the route itself. Also shown when the coworker has no minutes provisioned yet. | Check COWORKKIT_API_KEY is set on the server and the dev server was restarted; confirm the route returns the mint response unchanged. The precise reason is logged to the browser console. |
-| **Can’t connect** | The catch-all. The route or the network failed (a 5xx, an unreachable server), the coworker's account is revoked or not yet ready on our side, or your own getToken threw something the SDK couldn't classify: a fetch or CORS bug, a non-JSON body, an error thrown without its status and reason attached. | Open the browser console first; the real error is there. If it came from your code, fix that and make sure getToken relays the status and reason (the Getting started snippet does). If the route is healthy and the console shows a 5xx from us, retry; if it persists, get in touch. |
+| **Setup needed** | Your token route answered with a setup fault: a missing or unknown key, no user.id, or a bare 401/403/404 from the route itself. Also shown when what came back isn't a session at all (tokenUrl pointing at a page instead of your route), and when the coworker has no minutes provisioned yet. | tokenUrl must be the path of the route you created. Then check COWORKKIT_API_KEY is set on the server and the dev server was restarted, and that the route returns the mint response unchanged. The precise reason is logged to the browser console. |
+| **Can’t connect** | The catch-all. The route or the network failed (a 5xx, an unreachable server, a CORS block), the coworker's account is revoked or not yet ready on our side, or a custom getToken threw something the SDK couldn't classify: a non-JSON body, an error thrown without its status and reason attached. | Open the browser console first; the real error is there. If it came from a custom getToken, make sure it relays the status and reason (the reference under Advanced → Custom getToken does). If the route is healthy and the console shows a 5xx from us, retry; if it persists, get in touch. |
 | **No answer** | The session connected but no agent joined it in time. | Almost always transient; retry in a few seconds. If it keeps happening it's on our side, so get in touch. |
 | **Out of credit** | The coworker's workspace has no minutes left. | Top up under Settings → Plan & Billing in the portal; sessions start again immediately. |
 | **Line busy** | The coworker is at its daily session limit. | Wait for the day to roll over, or ask us about a higher limit. |
 
-The precision here depends on your `getToken` passing the failure through. If yours returns `res.json()` without checking `res.ok`, an error body comes back as a "session" with no `serverUrl`, and the SDK can only report *Setup needed*, for a bad key, an empty balance, and a busy line alike. You lose the distinction, not the label. The snippet in [Getting started](/docs/getting-started) throws with the status and the `reason` attached, which is what gives the ring its full vocabulary.
+With `tokenUrl` the SDK reads the failure itself: your route's status and `reason` reach the ring unchanged, which is what gives it its full vocabulary. A custom `getToken` has to pass them through the same way. If yours returns `res.json()` without checking `res.ok`, an error body comes back as a "session" with no `serverUrl`, and the SDK can only report *Setup needed*, for a bad key, an empty balance, and a busy line alike. You lose the distinction, not the label. The reference implementation under [Custom getToken](/docs/advanced#custom-gettoken) throws with the status and the `reason` attached.
 
 ## Once you're talking
 

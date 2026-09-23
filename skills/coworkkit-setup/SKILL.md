@@ -16,7 +16,7 @@ compatibility: >-
   React app) plus a place to run server-side code for the token route. Node 18+ is required for
   the bundled verifier. Browser + WebRTC only — no telephony, no mobile SDK.
 metadata:
-  sdk: "0.1.0-rc.4"
+  sdk: "0.1.0-rc.6"
 ---
 
 # Add a voice co-worker with Coworkkit, and verify it
@@ -34,13 +34,13 @@ after voice is confirmed.
 
 <!-- coworkkit:rules:start -->
 - **Provider high.** `<CoworkkitProvider>` wraps the whole signed-in tree, above the app's own context/state/shell providers. A Coworkkit hook rendered outside it registers nothing — the co-worker talks but can't act, and nothing errors.
-- **No key in the browser.** The Provider takes `getToken` and no key of any kind — there is no `apiKey` prop. The secret is `COWORKKIT_API_KEY`, read only by the server-side token route — never under a browser-readable prefix (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`) and never returned to the browser (for example from a Remix loader).
+- **No key in the browser.** The Provider is a one-line mount carrying `tokenUrl` — the path of the token route, e.g. `<CoworkkitProvider tokenUrl="/api/coworkkit/session">` — and takes no key of any kind; there is no `apiKey` prop. The secret is `COWORKKIT_API_KEY`, read only by the server-side token route — never under a browser-readable prefix (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`) and never returned to the browser (for example from a Remix loader).
 - **Real user id.** The token route derives the acting user's id from the app's own auth, server-side, never from the client. `"dev-user"` is for local development only.
 - **Declare where it stays mounted.** A function from an app-wide source (a context or store available on every page) gets its `useAction` in a persistent client component — the nav or shell — so it works from anywhere. Keep an action on its page only when its function is genuinely page-local.
 - **Cross-page.** For a page-local target, navigation is a `useElement` on the persistent nav and the target action stays on its own page. Never gate navigation through one page's `handActions` — it applies only while that page is active.
 - **Two separate gates.** Hand mode is the touch gate: anything that operates the UI (navigate, click, toggle) is a `useElement` action, gated automatically. `control: "hard"` is the risk gate for costly or destructive actions — an on-screen Confirm the co-worker cannot click itself. A plain data write via `useAction` needs neither.
 - **Shape.** `useAction({ name, description, run })` takes one object argument, not an `(event, handler)` pair.
-- **Edit, don't overwrite.** Adding Coworkkit code to an existing file keeps every line that file already has. The Provider wrapper and the token route are exact — take them from the quickstart for this stack, adapting only where they go.
+- **Edit, don't overwrite.** Adding Coworkkit code to an existing file keeps every line that file already has. The one-line Provider mount (with its `tokenUrl`) and the token route are exact — take them from the quickstart for this stack, adapting only where they go.
 - **Closed loop.** Never choose or configure a voice provider, a model, or a transport, and never add a provider key or connection URL — the runtime supplies all of it.
 <!-- coworkkit:rules:end -->
 
@@ -70,11 +70,15 @@ The token route needs one secret: `COWORKKIT_API_KEY`.
 
 Follow the quickstart from Beat 1. There are exactly two seams; wire only these in this beat.
 
-- **Front end — `@coworkkit/react`.** Install it, then mount `<CoworkkitProvider getToken={…}>`.
-  Mount it **as high as the signed-in tree goes** — above the app's own context/state/shell
-  providers, so every component that will ever declare an action is a descendant. It takes **no
-  key of any kind**. For a NEW provider file, write the whole file; to WRAP an existing entry file
-  keep every line it has and only move its contents inside the Provider.
+- **Front end — `@coworkkit/react`.** Install it, then mount
+  `<CoworkkitProvider tokenUrl="/api/coworkkit/session">` in the app's root layout — `tokenUrl` is
+  the path of the token route below (the SDK POSTs to it). Under Next.js App Router it goes
+  directly in `app/layout.tsx`, inside `<body>`: a Server Component can host it, so there is no
+  client wrapper file to create. Mount it **as high as the signed-in tree goes** — above the app's
+  own context/state/shell providers, so every component that will ever declare an action is a
+  descendant. It takes **no key of any kind**. To WRAP an existing entry file (layout, root,
+  `App`), keep every line it has and only move its contents inside the Provider; if the entry file
+  does not exist yet, write the whole file.
 - **Back end — `@coworkkit/server`.** Install it, then add the token-mint route that reads
   `COWORKKIT_API_KEY` server-side and returns the session. Next.js uses `coworkkitSessionRoute`
   from `@coworkkit/server/next`; other backends use `mintSession` from `@coworkkit/server`. For a
@@ -132,11 +136,12 @@ node <this skill's dir>/scripts/verify.mjs --url http://localhost:<dev-port>
 
 It reports each check as PASS / WARN / FAIL / SKIP and never prints your key. It checks: both
 packages installed at the same version and at least the SDK version this skill targets; a
-`<CoworkkitProvider>` with a `getToken` prop and **no** key prop; a token route importing
-`mintSession` or `coworkkitSessionRoute`; `COWORKKIT_API_KEY` referenced server-side (never under a
-browser-exposed prefix like `NEXT_PUBLIC_` / `VITE_` / `PUBLIC_`) in a git-ignored env file; the
-count of declared actions, surfaces and elements; and, when `--url` points at a running dev server,
-a **live token mint** through the app's own route.
+`<CoworkkitProvider>` with a `tokenUrl` or a `getToken` prop (one or the other — both is a WARN)
+and **no** key prop; a token route importing `mintSession` or `coworkkitSessionRoute`;
+`COWORKKIT_API_KEY` referenced server-side (never under a browser-exposed prefix like
+`NEXT_PUBLIC_` / `VITE_` / `PUBLIC_`) in a git-ignored env file; the count of declared actions,
+surfaces and elements; and, when `--url` points at a running dev server, a **live token mint**
+through the app's own route.
 
 - Fix **every FAIL** and re-run until there are none. A FAIL maps to a fix (see
   `references/error-codes.md` / `references/troubleshooting.md`).

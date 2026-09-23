@@ -20,7 +20,7 @@ You never choose or configure a provider, a model, or a transport. There is noth
 - **Your secret key stays server-side.** The browser never receives it (see below), so there is no key to leak into a bundle, a network tab, or a stray log line.
 - **There is nothing to wire but two small pieces.** No LiveKit project, no STT/TTS accounts, no model config. The runtime is ours to operate and yours to ignore.
 
-The trade is intentional. You give up provider choice, which almost no in-app agent ever needs to exercise. In return the integration is three small files instead of twenty (a token route, a Provider, and a one-line wrap in your layout), and it stays three as we upgrade the runtime underneath you.
+The trade is intentional. You give up provider choice, which almost no in-app agent ever needs to exercise. In return the integration is two small files instead of twenty (a token route, and a one-line Provider mount in your layout), and it stays two as we upgrade the runtime underneath you.
 
 ## Two halves: your browser and your backend
 
@@ -37,7 +37,7 @@ The browser half is just your React tree. It doesn't care whether you route by U
 
 **One:** a route on your backend holds `COWORKKIT_API_KEY` and mints a short-lived session token. `mintSession` POSTs your key to Coworkkit and returns `{ token, serverUrl, cloudUrl }`; `coworkkitSessionRoute` is the thin Next.js wrapper around it. The key never leaves this file:
 
-**`app/api/session/route.ts`**
+**`app/api/coworkkit/session/route.ts`**
 
 ```ts
 import { coworkkitSessionRoute } from "@coworkkit/server/next";
@@ -50,34 +50,15 @@ export const POST = coworkkitSessionRoute({
 });
 ```
 
-**Two:** in the browser, `CoworkkitProvider` calls that route through `getToken` and self-configures from the response. You never pass your key to it. The Provider takes no key prop at all, so your *secret* key has no path to the client:
+**Two:** in the browser, `CoworkkitProvider` calls that route (its `tokenUrl`) and self-configures from the response. You never pass your key to it. The Provider takes no key prop at all, so your *secret* key has no path to the client. It's one line in your layout:
 
-**`app/providers.tsx`**
+**`app/layout.tsx`**
 
 ```tsx
-<CoworkkitProvider
-  getToken={async (ctx) => {
-    const res = await fetch("/api/session", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(ctx ?? {}),
-    });
-    if (!res.ok) {
-      // Guard the parse: an error page is often HTML, and a throw here loses both fields.
-      const body = await res.json().catch(() => ({}));
-      // Pass the reason AND the status through. That is what lets the button say
-      // "Setup needed" for a bad key instead of a generic "Can't connect":
-      throw Object.assign(new Error(body.error ?? "session mint failed"), {
-        reason: body.reason,
-        status: res.status,
-      });
-    }
-    return res.json();
-  }}
->
-  {children}
-</CoworkkitProvider>
+<CoworkkitProvider tokenUrl="/api/coworkkit/session">{children}</CoworkkitProvider>
 ```
+
+**The browser leg.** When the user starts a session, the SDK sends `POST /api/coworkkit/session` (your `tokenUrl`) with a small JSON body of hints, the user's `language` and `timeZone`, and relays whatever your route answers. A 2xx body is the session, used unchanged. An error's `error`, `reason` and HTTP status become the button's status (*Setup needed*, *Out of credit*, …) instead of a generic *Can't connect*. The body is only hints: your route decides who the user is from your own auth, never from the browser. Need custom headers or a cross-origin API? Pass `getToken` instead ([Custom getToken](/docs/advanced#custom-gettoken)).
 
 That is the entire integration surface. The step-by-step version (install, env var, smoke-test) lives in [Getting started](/docs/getting-started). The point here is that there are only ever these two seams.
 
@@ -96,13 +77,13 @@ That is the entire integration surface. The step-by-step version (install, env v
 
 Concretely, one session comes up like this:
 
-1. `CoworkkitProvider` mounts and calls your `getToken`.
+1. The user taps the button, and `CoworkkitProvider` posts to your `tokenUrl` route.
 2. Your route runs `mintSession`, which exchanges your secret key for a short-lived token and returns `{ token, serverUrl, cloudUrl }`.
 3. The SDK opens the voice connection with that token and the agent worker joins.
 4. Your declared actions, surfaces, elements, and cues stream to the agent over the control channel, and stream again whenever they change.
 5. When the user speaks, the agent reasons and calls your actions back. Your `run` handlers execute right there in the browser, against live state.
 
-BrowserCoworkkitProvider→getToken()Your /session routeholds the key→mintSessionCoworkkit runtimemints + runs the session→joinsThe agentreasons, calls your actions←
+BrowserCoworkkitProvider→tokenUrlYour /session routeholds the key→mintSessionCoworkkit runtimemints + runs the session→joinsThe agentreasons, calls your actions←
 
 Short-lived token flows back to the browser — the SDK self-configures from it. Your secret key stays on the route; it never makes that trip.
 

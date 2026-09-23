@@ -6,7 +6,7 @@ Hand this to your coding agent, or follow it by hand. The only value you supply 
 
 You are integrating **Coworkkit** — a voice + agent runtime — into this existing Remix app. Work in two beats: **first**, wire the two runtime seams below so the user gets an AI co-worker they can talk to; **then**, once the developer confirms voice works, *offer* to wire a first action (final section). During the first beat, wire ONLY the seams — no app-specific actions, surfaces, elements, or pages.
 
-**How it works.** Coworkkit is a closed loop. The browser never holds the secret key. The backend holds `COWORKKIT_API_KEY` and mints a short-lived session token; the browser SDK calls that route through `getToken`, receives the token, and self-configures the voice connection from the response. There are two seams to wire — a `<CoworkkitProvider>` in the browser and a backend token-mint route — and nothing else: do not choose or configure a voice provider, a model, or a transport, and never add a provider key or connection URL. The runtime supplies all of that.
+**How it works.** Coworkkit is a closed loop. The browser never holds the secret key. The backend holds `COWORKKIT_API_KEY` and mints a short-lived session token; the browser SDK posts to that route (the Provider's `tokenUrl`), receives the token, and self-configures the voice connection from the response. There are two seams to wire — a `<CoworkkitProvider>` in the browser and a backend token-mint route — and nothing else: do not choose or configure a voice provider, a model, or a transport, and never add a provider key or connection URL. The runtime supplies all of that.
 
 **Front end — `@coworkkit/react` (holds no secret).** Install `@coworkkit/react` where this app's browser dependencies live. Then WRAP your existing `app/root.tsx`: keep everything it already contains and move it inside `<CoworkkitProvider>`, matching this shape:
 
@@ -16,30 +16,7 @@ import { Outlet } from "@remix-run/react";
 
 export default function App() {
   return (
-    <CoworkkitProvider
-      getToken={async (ctx) => {
-        const res = await fetch("/api/session", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(ctx ?? {}),
-        });
-        if (!res.ok) {
-          // Check before parsing, and guard the parse: an error page (a proxy 404,
-          // a framework 500) is often HTML, and a throw here would lose both fields.
-          const body = await res.json().catch(() => ({}));
-          // Pass the reason AND the status through — that is what lets the button say
-          // "Setup needed" for a bad key instead of a generic "Can't connect":
-          throw Object.assign(new Error(body.error ?? "session mint failed"), {
-            reason: body.reason,
-            status: res.status,
-          });
-        }
-        return res.json();
-      }}
-    >
-      <Outlet />
-      {/* In a dev build, the Coworkkit dev banner provides Watch — no mount needed. */}
-    </CoworkkitProvider>
+    <CoworkkitProvider tokenUrl="/api/coworkkit/session"><Outlet /></CoworkkitProvider>
   );
 }
 ```
@@ -52,7 +29,7 @@ Your real `app/root.tsx` also has `<html>`, `<head>`, `<Meta>`, `<Links>`, and `
 COWORKKIT_API_KEY=<YOUR_API_KEY>
 ```
 
-Keep it server-only — Remix reads it via process.env and never sends it to the browser unless you return it from a loader, which you must not do. Then create the new file `app/routes/api.session.ts` with exactly:
+Keep it server-only — Remix reads it via process.env and never sends it to the browser unless you return it from a loader, which you must not do. Then create the new file `app/routes/api.coworkkit.session.ts` with exactly:
 
 ```ts
 import type { ActionFunctionArgs } from "@remix-run/node";
@@ -95,10 +72,10 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 ```
 
-Derive the acting user id from this app's authenticated session, server-side; the `"dev-user"` placeholder is for local development only.
+Any path works; this is just the default. Use the same URL in `tokenUrl`. Derive the acting user id from this app's authenticated session, server-side; the `"dev-user"` placeholder is for local development only. The SDK posts the user's `language` and `timeZone` to this route as JSON hints. This route forwards them explicitly, as the snippet shows, with the request IP, into the mint's `user` for localized voice and region placement — used in-request only, never stored.
 
 **Rules for you, the agent.**
-- The `<CoworkkitProvider>` wrapper (with its `getToken` prop) and the token-mint route are exact — reproduce them as shown; adapt only *where* each goes to fit this repo.
+- The one-line `<CoworkkitProvider tokenUrl="/api/coworkkit/session">` mount and the token-mint route are exact — reproduce them as shown; adapt only *where* each goes to fit this repo.
 - Where the instructions above say to create a NEW file, write the whole file; do not splice fragments.
 - Where they say to WRAP or ADD TO an existing file, keep every line that file already has and only insert the new code — never overwrite the file or drop its contents. In Remix, leave the `<html>`, `<head>`, `<Meta>`, `<Links>`, and `<Scripts>` exactly as they are and wrap only the `<Outlet />`.
 - `<CoworkkitProvider>` takes no key of any kind — there is no `apiKey` prop. The secret lives only in the route above, server-side.

@@ -6,7 +6,7 @@ Hand this to your coding agent, or follow it by hand. The only value you supply 
 
 You are integrating **Coworkkit** — a voice + agent runtime — into this existing Vite (React) single-page app with an Express backend. Work in two beats: **first**, wire the two runtime seams below so the user gets an AI co-worker they can talk to; **then**, once the developer confirms voice works, *offer* to wire a first action (final section). During the first beat, wire ONLY the seams — no app-specific actions, surfaces, elements, or pages.
 
-**How it works.** Coworkkit is a closed loop. The browser never holds the secret key. The backend holds `COWORKKIT_API_KEY` and mints a short-lived session token; the browser SDK calls that route through `getToken`, receives the token, and self-configures the voice connection from the response. There are two seams to wire — a `<CoworkkitProvider>` in the browser and a backend token-mint route — and nothing else: do not choose or configure a voice provider, a model, or a transport, and never add a provider key or connection URL. The runtime supplies all of that.
+**How it works.** Coworkkit is a closed loop. The browser never holds the secret key. The backend holds `COWORKKIT_API_KEY` and mints a short-lived session token; the browser SDK posts to that route (the Provider's `tokenUrl`), receives the token, and self-configures the voice connection from the response. There are two seams to wire — a `<CoworkkitProvider>` in the browser and a backend token-mint route — and nothing else: do not choose or configure a voice provider, a model, or a transport, and never add a provider key or connection URL. The runtime supplies all of that.
 
 **Front end — `@coworkkit/react` (holds no secret).** Install `@coworkkit/react` where this app's browser dependencies live. Then WRAP your existing `src/App.tsx`: keep everything it already contains and move it inside `<CoworkkitProvider>`, matching this shape:
 
@@ -15,35 +15,12 @@ import { CoworkkitProvider } from "@coworkkit/react";
 
 export function App() {
   return (
-    <CoworkkitProvider
-      getToken={async (ctx) => {
-        const res = await fetch("/api/session", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(ctx ?? {}),
-        });
-        if (!res.ok) {
-          // Check before parsing, and guard the parse: an error page (a proxy 404,
-          // a framework 500) is often HTML, and a throw here would lose both fields.
-          const body = await res.json().catch(() => ({}));
-          // Pass the reason AND the status through — that is what lets the button say
-          // "Setup needed" for a bad key instead of a generic "Can't connect":
-          throw Object.assign(new Error(body.error ?? "session mint failed"), {
-            reason: body.reason,
-            status: res.status,
-          });
-        }
-        return res.json();
-      }}
-    >
-      {/* ...your existing app... */}
-      {/* In a dev build, the Coworkkit dev banner provides Watch — no mount needed. */}
-    </CoworkkitProvider>
+    <CoworkkitProvider tokenUrl="/api/coworkkit/session">{/* ...your existing app... */}</CoworkkitProvider>
   );
 }
 ```
 
-The `{/* ...your existing app... */}` marker is where your current `App` contents go — move them there, don't discard them. Vite apps are all-client, so there's no server/client boundary to manage. If the Vite dev server and Express run on different ports, add a `/api` proxy in `vite.config.ts` so the `fetch` reaches Express.
+The `{/* ...your existing app... */}` marker is where your current `App` contents go — move them there, don't discard them. Vite apps are all-client, so there's no server/client boundary to manage. If the Vite dev server and Express run on different ports, add a `/api` proxy in `vite.config.ts` so the SDK's `POST /api/coworkkit/session` reaches Express.
 
 **Back end — `@coworkkit/server` (holds the key).** Install `@coworkkit/server` where this app's server dependencies live. Put the secret key in `.env (your Express server's root)`:
 
@@ -59,7 +36,7 @@ import { CoworkkitError, mintSession } from "@coworkkit/server";
 // Mints a session from your secret key (read from COWORKKIT_API_KEY).
 // `user.id` is the user the agent acts as. "dev-user" is fine while developing; in production
 // derive it from your own auth/session middleware, server-side — never from the client.
-app.post("/api/session", express.json(), async (req, res) => {
+app.post("/api/coworkkit/session", express.json(), async (req, res) => {
   try {
     // The SDK posts its context (the browser's time zone + language) — forward it, plus the
     // client IP, so the session is placed in the user's region (used in-request only, never stored).
@@ -90,10 +67,10 @@ app.post("/api/session", express.json(), async (req, res) => {
 });
 ```
 
-Derive the acting user id from this app's authenticated session, server-side; the `"dev-user"` placeholder is for local development only.
+Any path works; this is just the default. Use the same URL in `tokenUrl`. Derive the acting user id from this app's authenticated session, server-side; the `"dev-user"` placeholder is for local development only. The SDK posts the user's `language` and `timeZone` to this route as JSON hints. This route forwards them explicitly, as the snippet shows, with the request IP, into the mint's `user` for localized voice and region placement — used in-request only, never stored.
 
 **Rules for you, the agent.**
-- The `<CoworkkitProvider>` wrapper (with its `getToken` prop) and the token-mint route are exact — reproduce them as shown; adapt only *where* each goes to fit this repo.
+- The one-line `<CoworkkitProvider tokenUrl="/api/coworkkit/session">` mount and the token-mint route are exact — reproduce them as shown; adapt only *where* each goes to fit this repo.
 - Where the instructions above say to create a NEW file, write the whole file; do not splice fragments.
 - Where they say to WRAP or ADD TO an existing file, keep every line that file already has and only insert the new code — never overwrite the file or drop its contents. In Remix, leave the `<html>`, `<head>`, `<Meta>`, `<Links>`, and `<Scripts>` exactly as they are and wrap only the `<Outlet />`.
 - `<CoworkkitProvider>` takes no key of any kind — there is no `apiKey` prop. The secret lives only in the route above, server-side.

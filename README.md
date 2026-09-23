@@ -49,9 +49,9 @@ Later, to teach the co-worker more:
 
 `coworkkit-setup` runs `coworkkit-setup/scripts/verify.mjs` (Node 18+, zero dependencies) in your
 repo. It checks that both packages are installed at the same version, that `<CoworkkitProvider>`
-is mounted with a `getToken` prop and no key prop, that the token route reads the secret
-server-side from a git-ignored env file, and — when your dev server is running — that a real token
-mint through **your own** token route succeeds. It never prints your key.
+is mounted with a `tokenUrl` (or `getToken`) prop and no key prop, that the token route reads the
+secret server-side from a git-ignored env file, and — when your dev server is running — that a
+real token mint through **your own** token route succeeds. It never prints your key.
 
 ## Not the source of truth
 
