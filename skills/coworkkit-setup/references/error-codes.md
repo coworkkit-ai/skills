@@ -16,7 +16,7 @@ Relay the status and the `reason` to the browser unchanged (the [Getting started
 
 | HTTP | reason | What happened | Ring says | What to do |
 | --- | --- | --- | --- | --- |
-| 401 | `missing_api_key` | No x-api-key header reached us. | **Setup needed** | Set COWORKKIT_API_KEY on the server and restart it. |
+| 401 | `missing_api_key` | No x-api-key header reached us. (The Next.js drop-in route answers the same token with a 500 when the key isn't set on your server; see below.) | **Setup needed** | Set COWORKKIT_API_KEY on the server and restart it. |
 | 401 | `unknown_api_key` | The key doesn't match any workspace. | **Setup needed** | Check the key, and that it belongs to the workspace you think it does. |
 | 403 | `tenant_revoked` | The workspace's access has been revoked. | **Can’t connect** | Nothing in your code fixes this; get in touch. |
 | 400 | `missing_user` | The mint body carried no user.id. | **Setup needed** | Derive user.id server-side from your own authenticated session and send it. |
@@ -53,7 +53,14 @@ try {
 
 A network failure (DNS, a refused connection) is not wrapped: it surfaces as `fetch`'s own `TypeError`. The key never appears in the message.
 
-The Next.js drop-in route maps these for you: a missing `COWORKKIT_API_KEY` answers `500` `{ "error": "COWORKKIT_API_KEY is not set" }`; a `CoworkkitError` answers with the upstream status when it's 400 or above and `502` otherwise (so a 200-with-HTML can't pass your browser's `res.ok` check), with `{ "error", "reason" }` as the body; anything else thrown, including your own `getUserId`, answers `502` `{ "error": "<its message>" }`.
+The Next.js drop-in route maps these for you: a `CoworkkitError` answers with the upstream status when it's 400 or above and `502` otherwise (so a 200-with-HTML can't pass your browser's `res.ok` check), with `{ "error", "reason" }` as the body; anything else thrown, including your own `getUserId`, answers `502` `{ "error": "<its message>" }`. Two refusals come from the route itself, before it calls us, in the same body:
+
+| HTTP | reason | What happened | Ring says | What to do |
+| --- | --- | --- | --- | --- |
+| 500 | `missing_api_key` | COWORKKIT_API_KEY isn't set where your token route runs, so the route never calls us. Same token as the 401 above; the 500 says your route refused, not us. | **Setup needed** | Add COWORKKIT_API_KEY to .env.local (or your host's environment), then restart the server. |
+| 500 | `public_api_key` | The key is set under a browser-exposed name (NEXT_PUBLIC_, VITE_ or PUBLIC_), which ships it to every visitor. Development builds only: in production the route logs a warning and never refuses over it. | **Setup needed** | Rename it to COWORKKIT_API_KEY (server-only, no prefix), then restart the server. |
+
+In a development build, the in-app dev banner turns both into a fix you can paste: the `.env.local` line, or the rename (see [Development mode](/docs/dev-mode)).
 
 ## What the user sees
 

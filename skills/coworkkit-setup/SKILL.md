@@ -16,7 +16,7 @@ compatibility: >-
   React app) plus a place to run server-side code for the token route. Node 18+ is required for
   the bundled verifier. Browser + WebRTC only — no telephony, no mobile SDK.
 metadata:
-  sdk: "0.1.0-rc.6"
+  sdk: "0.1.0-rc.7"
 ---
 
 # Add a voice co-worker with Coworkkit, and verify it

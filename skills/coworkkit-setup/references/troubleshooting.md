@@ -32,7 +32,7 @@ When a session can't start, the button doesn't just sit there: its ring shows a 
 
 | Ring says | What happened | What to do |
 | --- | --- | --- |
-| **Setup needed** | Your token route answered with a setup fault: a missing or unknown key, no user.id, or a bare 401/403/404 from the route itself. Also shown when what came back isn't a session at all (tokenUrl pointing at a page instead of your route), and when the coworker has no minutes provisioned yet. | tokenUrl must be the path of the route you created. Then check COWORKKIT_API_KEY is set on the server and the dev server was restarted, and that the route returns the mint response unchanged. The precise reason is logged to the browser console. |
+| **Setup needed** | Your token route answered with a setup fault: a missing or unknown key, a key under a browser-exposed name (NEXT_PUBLIC_…), no user.id, or a bare 401/403/404 from the route itself. Also shown when what came back isn't a session at all (tokenUrl pointing at a page instead of your route), and when the coworker has no minutes provisioned yet. | tokenUrl must be the path of the route you created. Then check COWORKKIT_API_KEY is set on the server and the dev server was restarted, and that the route returns the mint response unchanged. The precise reason is logged to the browser console. |
 | **Can’t connect** | The catch-all. The route or the network failed (a 5xx, an unreachable server, a CORS block), the coworker's account is revoked or not yet ready on our side, or a custom getToken threw something the SDK couldn't classify: a non-JSON body, an error thrown without its status and reason attached. | Open the browser console first; the real error is there. If it came from a custom getToken, make sure it relays the status and reason (the reference under Advanced → Custom getToken does). If the route is healthy and the console shows a 5xx from us, retry; if it persists, get in touch. |
 | **No answer** | The session connected but no agent joined it in time. | Almost always transient; retry in a few seconds. If it keeps happening it's on our side, so get in touch. |
 | **Out of credit** | The coworker's workspace has no minutes left. | Top up under Settings → Plan & Billing in the portal; sessions start again immediately. |
@@ -64,4 +64,4 @@ Modern Chromium (Chrome, Edge, Arc, Brave), Safari, and Firefox: anything with W
 
 ### Still stuck?
 
-Email [ebi@coworkkit.ai](mailto:ebi@coworkkit.ai) with the Watch panel's session export (the download button in its header). It carries the state, timeline, and transcript we need to see what you saw.
+Email [ebi@coworkkit.ai](mailto:ebi@coworkkit.ai) with the Watch panel's session export (the download button in its header). It carries the state, timeline, and transcript we need to see what you saw. A session that never started has no export: send the console line the dev banner shows instead.
