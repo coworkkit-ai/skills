@@ -64,4 +64,4 @@ Modern Chromium (Chrome, Edge, Arc, Brave), Safari, and Firefox: anything with W
 
 ### Still stuck?
 
-Email [ebi@coworkkit.ai](mailto:ebi@coworkkit.ai) with the Watch panel's session export (the download button in its header). It carries the state, timeline, and transcript we need to see what you saw. A session that never started has no export: send the console line the dev banner shows instead.
+Email [support@coworkkit.ai](mailto:support@coworkkit.ai) with the Watch panel's session export (the download button in its header). It carries the state, timeline, and transcript we need to see what you saw. A session that never started has no export: send the console line the dev banner shows instead.

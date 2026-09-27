@@ -32,7 +32,7 @@ npm install @coworkkit/react @coworkkit/server
 Create or edit `.env.local` in your project root with a key from your Coworker's [API keys](/tenants) tab:
 
 ```bash
-COWORKKIT_API_KEY=ck_...your_api_key...
+COWORKKIT_API_KEY=<YOUR_API_KEY>
 ```
 
 [Sign in](/sign-in) to get this pre-filled with your key — when you create the key, the API keys page shows it as exactly this line, ready to copy (switch to *Key only* for the bare key). It’s shown only once, so that’s the only moment we can. `@coworkkit/server` reads `COWORKKIT_API_KEY` by itself. Restart your dev server after creating it; Next reads env vars at server start. Keep it server-only: never under a browser-readable prefix like `NEXT_PUBLIC_`.

@@ -38,7 +38,7 @@ For a network that filters outbound traffic, allow:
 - `api.coworkkit.ai`: TCP 443
 - `*.transport.coworkkit.ai`: TCP 443, UDP 7882, and TCP 7881
 
-Allow by hostname; we don't publish static IP ranges yet. UDP 7882 is the normal path for audio and TCP 7881 the fallback when UDP is blocked. On a network that blocks both, and some corporate networks only let TCP 443 out, the media connection never establishes and the session can't start. A relay over TLS on 443 for exactly that case is on the roadmap; if your users sit on such a network, email [ebi@coworkkit.ai](mailto:ebi@coworkkit.ai) so we know.
+Allow by hostname; we don't publish static IP ranges yet. UDP 7882 is the normal path for audio and TCP 7881 the fallback when UDP is blocked. On a network that blocks both, and some corporate networks only let TCP 443 out, the media connection never establishes and the session can't start. A relay over TLS on 443 for exactly that case is on the roadmap; if your users sit on such a network, email [support@coworkkit.ai](mailto:support@coworkkit.ai) so we know.
 
 ## CORS
 

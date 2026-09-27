@@ -27,8 +27,7 @@ what the co-worker can do and where the user is; Coworkkit runs the speech, the 
 transport behind a short-lived session token your own backend mints. You never choose or configure
 a voice provider, a model, or a transport, and there is no key in the browser.
 
-Work the beats in order. Do not skip the verify beat, and do not wire app-specific actions until
-after voice is confirmed.
+Work the beats in order, and do not skip the verify beat. Beat 5 governs which actions you wire, and when.
 
 ## Beat 0 — Rules you follow throughout
 
@@ -56,7 +55,7 @@ after voice is confirmed.
      (`quickstart-nextjs-app-router.md`, `quickstart-vite-express.md`, `quickstart-remix.md`).
    - Bundled fallback: `references/quickstart-<framework>.md` in this skill.
    - If the Coworkkit MCP is connected (Claude Code plugin path), call `get_started` for the same content instead of fetching.
-3. **Use the quickstart for the exact code and where each file goes — nothing else.** It is written as a standalone prompt with its own two-step flow. Where its procedure differs from this skill (it says to skip surfaces, and to smoke-test before anything is verified), this skill's beats win: declare the landing surface (Beat 4), make the first-action offer (Beat 5), and verify (Beat 6) before anyone starts a session.
+3. **Use the quickstart for the exact code and where each file goes.** It is written as a standalone prompt with its own two-step flow. Where its procedure differs from this skill (it says to skip surfaces, and to smoke-test before anything is verified), this skill's beats win: declare the landing surface (Beat 4), wire `celebrate` and make the first-action offer (Beat 5), and verify (Beat 6) before anyone starts a session. Its `celebrate` sample action is part of this skill's flow, not something it overrides.
 4. Read the app's entry files before you change anything: the front-end entry (layout/root/`App`), the router or nav, and where server code lives.
 
 ## Beat 2 — Account and key
@@ -104,15 +103,12 @@ useSurface({ label: "Tasks board", data: { total: tasks.length, remaining } });
 surface makes the very first greeting aware of where the user is — with no runtime change. Pick a
 short, human label for the page the user lands on.
 
-## Beat 5 — Offer the first action (don't auto-wire, don't defer)
+## Beat 5 — Prove it acts, then offer the first real action (don't auto-wire, don't defer)
 
-You have the app's code open now, so make a concrete offer immediately:
+You have the app's code open now, so do all of this in this turn — even if the live check in Beat 6 is still failing, because a key problem never blocks the offer:
 
-1. Tell the developer plainly: voice is ready to smoke-test, but it can talk and not yet act,
-   because no actions are wired.
-2. Name the **two or three** things a user would most likely ask for by voice in **this** app, as
-   the **real** functions you found (e.g. `addTask` in `state.tsx`) — not generic examples — and
-   ask which one to wire.
+1. **Wire the `celebrate` sample action** exactly as the quickstart gives it: the `CelebrateAction` component, mounted anywhere inside `<CoworkkitProvider>`. It needs no knowledge of this app, so the very first session proves the co-worker **acts**, not just talks: the developer says "celebrate" and a short burst appears on screen.
+2. **Offer a real action.** Name the **two or three** things a user would most likely ask for by voice in **this** app, as the **real** functions you found (e.g. `addTask` in `state.tsx`) — not generic examples — and ask which one to wire.
 3. Wire **only** the one they pick, as a `useAction({ name, description, run })`:
    - If its function comes from an **app-wide** source (a context/store available on every page),
      mount the `useAction` in a **persistent component** (the nav or another always-mounted client
@@ -123,6 +119,8 @@ You have the app's code open now, so make a concrete offer immediately:
 See `references/actions-surfaces.md` and `references/patterns.md` (or the live
 `https://app.coworkkit.ai/docs-md/patterns.md`) for mount shape and the gates. Deeper wiring is the
 `coworkkit-declare` skill's job — wire exactly one action here.
+
+Once the real action works by voice, `CelebrateAction` has done its job — the closing report tells the developer to delete it.
 
 ## Beat 6 — Verify (fix every FAIL, then re-run)
 
@@ -145,24 +143,22 @@ through the app's own route.
 
 - Fix **every FAIL** and re-run until there are none. A FAIL maps to a fix (see
   `references/error-codes.md` / `references/troubleshooting.md`).
+- If the live check rejects the key (`unknown_api_key` or `missing_api_key`), no code change fixes it: ask the developer to copy the key again from the coworker's **API keys** tab into the env file, then re-run. You may check the line's shape — present, 32 characters of letters, digits, `-` and `_` (keys have no fixed prefix), no quotes or surrounding spaces — without printing it. Never print, echo or log any part of the key, **not even a prefix**. Make your Beat 5 offer in this same message.
 - If the live check SKIPs because the dev server is not running, ask the developer to start it and
   re-run with `--url`.
 - Do not tell the developer to start a session until the verifier exits with no FAIL.
 
 ## Beat 7 — First magic
 
-Give the developer the exact moment, tied to the action you wired. For example, if you wired
-`addTask`:
+Give the developer the exact moment. `celebrate` always works:
 
-> Start the app, click the Coworkkit button in the bottom-right corner, allow the microphone, and
-> say **"add a task to call mom"**. You'll hear the co-worker reply, and a new "call mom" task
-> appears in the list.
+> Start the app, click the small round button in the bottom-right corner, allow the microphone, and say **"celebrate"**. A short burst appears on screen — proof the co-worker acts, not just talks.
 
-If no action is wired yet — the developer declined, or the app has no real functions yet — the first magic is the greeting itself: *start the app, click the small round button in the bottom-right corner, allow the microphone, and say **"hello — where am I?"*** The co-worker replies by voice and names the surface you declared.
+If you wired a real action, give its moment too. For example, if you wired `addTask`:
 
-Name the exact phrase to say and the exact visible result. If the Coworkkit MCP is connected and
-the first session doesn't behave, call `diagnose_session` on the session id; otherwise open the
-coworker's **Sessions** page in the portal to see why.
+> Say **"add a task to call mom"**. You'll hear the co-worker reply, and a new "call mom" task appears in the list.
+
+Name the exact phrase to say and the exact visible result. If the Coworkkit MCP is connected and the first session doesn't behave, call `diagnose_session` on the session id; otherwise open the coworker's **Sessions** page in the portal to see why.
 
 ## Beat 8 — Persist the rules
 
@@ -187,7 +183,9 @@ Close with a short report containing:
   route path.
 - **Before production** — if `"dev-user"` is still in the route, flag it: derive the real user id
   from the app's auth before shipping.
-- **What to test** — the first-magic phrase and its visible result.
+- **What you verified** — exactly what you checked: the wiring and a live token mint through the app's own route. Don't claim the voice loop works; hearing it is the developer's test.
+- **What to test** — the first-magic phrases and their visible results (`celebrate`, plus the real action if you wired one).
+- **Clean-up** — once the real action works by voice, delete `CelebrateAction`.
 - **Next** — run the `coworkkit-declare` skill to wire more of the app (more actions, surfaces,
   elements, the `control` gate, Hand mode).
 

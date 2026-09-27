@@ -117,4 +117,4 @@ The other way round, when the browser blocks the agent's audio from playing (aut
 
 The optional dev tools call two more routes with the session's token, and their errors are `{ "error": "..." }` with no `reason`: `401` for an expired or invalid session token, `403` for a revoked workspace, `400` for a missing or over-long text, `429` for the daily cap. The look-code lookup ([Appearance](/docs/appearance)) answers `404` for an unknown code and the SDK falls back to the default look silently, with one `console.debug` line. Everything else, the voice connection included, is covered by [Network requirements](/docs/network-requirements).
 
-Missing one? Email [ebi@coworkkit.ai](mailto:ebi@coworkkit.ai) with the Watch export and we'll add it here.
+Missing one? Email [support@coworkkit.ai](mailto:support@coworkkit.ai) with the Watch export and we'll add it here.
