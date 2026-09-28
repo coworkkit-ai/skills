@@ -143,7 +143,7 @@ through the app's own route.
 
 - Fix **every FAIL** and re-run until there are none. A FAIL maps to a fix (see
   `references/error-codes.md` / `references/troubleshooting.md`).
-- If the live check rejects the key (`unknown_api_key` or `missing_api_key`), no code change fixes it: ask the developer to copy the key again from the coworker's **API keys** tab into the env file, then re-run. You may check the line's shape — present, 32 characters of letters, digits, `-` and `_` (keys have no fixed prefix), no quotes or surrounding spaces — without printing it. Never print, echo or log any part of the key, **not even a prefix**. Make your Beat 5 offer in this same message.
+- If the live check rejects the key (`unknown_api_key` or `missing_api_key`), no code change fixes it: ask the developer to copy the key again from the coworker's **API keys** tab into the env file, then re-run. You may check the line's shape — present, `ck_live_` followed by 32 letters, digits, `-` or `_` (an older key is just the 32 characters; both are valid), no quotes or surrounding spaces — without printing it. Never print, echo or log any part of the key, **not even a prefix**. Make your Beat 5 offer in this same message.
 - If the live check SKIPs because the dev server is not running, ask the developer to start it and
   re-run with `--url`.
 - Do not tell the developer to start a session until the verifier exits with no FAIL.
