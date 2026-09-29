@@ -58,6 +58,10 @@ Open the [Watch panel](/docs/watch) and check the **Catalogue** tab. If the acti
 
 Sessions idle-cut after a stretch of inactivity to save your minutes; see [the session lifecycle](/docs/advanced). Nothing's broken; click the button again to start a fresh session.
 
+### The session dropped when my network hiccuped.
+
+It shouldn't — a Wi-Fi hand-off, a VPN switch, or a brief connection blip no longer ends a session. The button stays live while the connection re-establishes (you'll see it show *connecting* if it takes more than a few seconds), then the same agent picks the conversation back up on the same session — no re-greeting, one usage record. If a session does end, the reason is recorded in the Watch timeline (and the session's log), so a genuine drop is never mistaken for someone pressing End.
+
 ### Which browsers are supported?
 
 Modern Chromium (Chrome, Edge, Arc, Brave), Safari, and Firefox: anything with WebRTC and microphone access. There's no plugin or extension to install. Details on [Browser & framework support](/docs/compatibility).

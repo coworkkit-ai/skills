@@ -16,7 +16,7 @@ compatibility: >-
   coworkkit-setup's job). React front end; Node 18+ for the bundled verifier. Browser + WebRTC
   only.
 metadata:
-  sdk: "0.1.0-rc.8"
+  sdk: "0.1.0-rc.9"
 ---
 
 # Declare what the co-worker can do, and change it safely
